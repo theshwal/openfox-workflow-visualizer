@@ -1,10 +1,11 @@
 {
   "name": "openfox-workflow-visualizer",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "In-chat OpenFox workflow visualizer: live step, iteration counters and an interactive workflow graph (iframe panel) contributed through the openfox/plugin v2 composer.top zone.",
   "type": "module",
-  "main": "./src/index.js",
+  "main": "./lib/index.js",
   "files": [
+    "lib",
     "src",
     "assets",
     "scripts",
@@ -20,7 +21,7 @@
   "license": "MIT",
   "openfox": {
     "apiVersion": 2,
-    "entry": "./src/index.js",
+    "entry": "./lib/index.js",
     "displayName": "Workflow Visualizer",
     "description": "Shows the running workflow, its current step and the engine's exact iteration counters above the chat composer.",
     "capabilities": [
@@ -34,7 +35,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "node scripts/build-graph.mjs"
+    "build": "node scripts/build-plugin.mjs && node scripts/build-graph.mjs",
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "react": "^19.3.1",
