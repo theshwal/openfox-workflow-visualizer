@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Workflow graph</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        --bg: #0f1115;
+        --fg: #e6e8ee;
+        --muted: #9aa3b2;
+        --border: #2a2f3a;
+        --accent: #f59e0b;
+        --node: #1a1f29;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #ffffff;
+          --fg: #16181d;
+          --muted: #5b6472;
+          --border: #d8dde5;
+          --node: #f4f6f9;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 12px;
+        background: var(--bg);
+        color: var(--fg);
+        font: 13px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      header { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; margin-bottom: 10px; }
+      h1 { font-size: 14px; margin: 0; font-weight: 600; }
+      .meta { color: var(--muted); }
+      .pill { border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; color: var(--muted); }
+      .canvas { overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: transparent; }
+      svg { display: block; max-width: 100%; height: auto; }
+      .node rect { fill: var(--node); stroke: var(--border); stroke-width: 1.5; rx: 10; }
+      .node.current rect { stroke: var(--accent); stroke-width: 2.5; }
+      .node text { fill: var(--fg); font-size: 12px; }
+      .node .sub { fill: var(--muted); font-size: 10px; }
+      .edge { stroke: var(--muted); stroke-width: 1.4; fill: none; opacity: 0.75; }
+      .edge-label { fill: var(--muted); font-size: 9px; }
+      .empty { color: var(--muted); padding: 18px 6px; }
+      .error { color: #f87171; padding: 12px 6px; white-space: pre-wrap; }
+      .legend { margin-top: 8px; color: var(--muted); font-size: 11px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="title">Workflow graph</h1>
+      <span class="meta" id="status"></span>
+      <span class="pill" id="scope" hidden></span>
+      <span class="meta" id="counter"></span>
+    </header>
+    <div class="canvas" id="canvas"><p class="empty">Loading…</p></div>
+    <p class="legend">Orange outline = current step · “×N” = runs observed by the engine · edges come from the workflow definition.</p>
+    <script type="module">
+      import { buildGraphModel } from './graph.js'
+
+      const params = new URLSearchParams(location.search)
+      const sessionId = params.get('sessionId') ?? ''
+      const workdir = params.get('workdir') ?? ''
+      const projectId = params.get('projectId') ?? ''
+      const token = params.get('token') ?? ''
+      const PLUGIN_ID = 'openfox-workflow-visualizer'
+
+      const titleEl = document.getElementById('title')
+      const statusEl = document.getElementById('status')
+      const scopeEl = document.getElementById('scope')
+      const counterEl = document.getElementById('counter')
+      const canvas = document.getElementById('canvas')
+
+      // The iframe is sandboxed (opaque origin), so relative URLs do not
+      // resolve: derive the host origin from the asset URL itself.
+      const ORIGIN = new URL(location.href).origin
+
+      const authHeaders = () => (token ? { Authorization: `Bearer ${token}`, 'x-session-token': token } : {})
+
+      function showError(message) {
+        canvas.replaceChildren()
+        const p = document.createElement('p')
+        p.className = 'error'
+        p.textContent = message
+        canvas.append(p)
+      }
+
+      async function rpc(method, body) {
+        const res = await fetch(`${ORIGIN}/api/plugins/${PLUGIN_ID}/rpc/${method}`, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(body),
+        })
+        if (!res.ok) throw new Error(`RPC ${method} failed (${res.status})`)
+        const json = await res.json()
+        return json.result
+      }
+
+      // The catalog endpoint returns summaries only; the definition endpoint
+      // returns the full workflow (steps + transitions) for an exact id+scope.
+      async function fetchDefinition(workflowId, scope) {
+        const query = new URLSearchParams()
+        if (scope) query.set('scope', scope)
+        if (workdir) query.set('workdir', workdir)
+        const suffix = query.toString() ? `?${query.toString()}` : ''
+        const res = await fetch(`${ORIGIN}/api/workflows/${encodeURIComponent(workflowId)}${suffix}`, {
+          mode: 'cors',
+          headers: authHeaders(),
+        })
+        if (!res.ok) throw new Error(`workflow definition unavailable (${res.status})`)
+        return res.json()
+      }
+
+      function render(model, execution) {
+        canvas.replaceChildren()
+        const NS = 'http://www.w3.org/2000/svg'
+        const svg = document.createElementNS(NS, 'svg')
+        svg.setAttribute('viewBox', `0 0 ${model.size.width} ${model.size.height}`)
+        svg.setAttribute('width', String(model.size.width))
+        svg.setAttribute('height', String(model.size.height))
+        svg.setAttribute('role', 'img')
+        svg.setAttribute(
+          'aria-label',
+          `Workflow ${model.workflowName}: ${model.steps.length} steps, current step ${execution.currentStepName ?? 'unknown'}`,
+        )
+
+        const defs = document.createElementNS(NS, 'defs')
+        const marker = document.createElementNS(NS, 'marker')
+        marker.setAttribute('id', 'arrow')
+        marker.setAttribute('viewBox', '0 0 10 10')
+        marker.setAttribute('refX', '9')
+        marker.setAttribute('refY', '5')
+        marker.setAttribute('markerWidth', '6')
+        marker.setAttribute('markerHeight', '6')
+        marker.setAttribute('orient', 'auto-start-reverse')
+        const arrowPath = document.createElementNS(NS, 'path')
+        arrowPath.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z')
+        arrowPath.setAttribute('fill', 'currentColor')
+        marker.append(arrowPath)
+        defs.append(marker)
+        svg.append(defs)
+
+        const edgeLayer = document.createElementNS(NS, 'g')
+        for (const line of model.lines) {
+          const path = document.createElementNS(NS, 'path')
+          const midX = (line.x1 + line.x2) / 2
+          path.setAttribute('d', `M ${line.x1} ${line.y1} C ${midX} ${line.y1}, ${midX} ${line.y2}, ${line.x2} ${line.y2}`)
+          path.setAttribute('class', 'edge')
+          path.setAttribute('marker-end', 'url(#arrow)')
+          edgeLayer.append(path)
+          if (line.label) {
+            const label = document.createElementNS(NS, 'text')
+            label.setAttribute('x', String(midX))
+            label.setAttribute('y', String((line.y1 + line.y2) / 2 - 4))
+            label.setAttribute('text-anchor', 'middle')
+            label.setAttribute('class', 'edge-label')
+            label.textContent = line.label
+            edgeLayer.append(label)
+          }
+        }
+        svg.append(edgeLayer)
+
+        for (const node of model.nodes) {
+          const step = model.steps.find((candidate) => candidate.id === node.id)
+          const group = document.createElementNS(NS, 'g')
+          group.setAttribute('class', step?.current ? 'node current' : 'node')
+          group.setAttribute('transform', `translate(${PAD_X(node)}, ${PAD_Y(node)})`)
+          group.setAttribute('data-step-id', node.id)
+          group.setAttribute('role', 'listitem')
+          group.setAttribute(
+            'aria-label',
+            `${node.name} (${node.type})${step?.current ? ', current step' : ''}${step?.visits !== undefined ? `, ${step.visits} runs` : ''}`,
+          )
+
+          const rect = document.createElementNS(NS, 'rect')
+          rect.setAttribute('width', String(NODE_W))
+          rect.setAttribute('height', String(NODE_H))
+          group.append(rect)
+
+          const label = document.createElementNS(NS, 'text')
+          label.setAttribute('x', '12')
+          label.setAttribute('y', '22')
+          label.textContent = node.name
+          group.append(label)
+
+          const sub = document.createElementNS(NS, 'text')
+          sub.setAttribute('x', '12')
+          sub.setAttribute('y', '39')
+          sub.setAttribute('class', 'sub')
+          const visits = step?.visits !== undefined ? ` ×${step.visits}` : ''
+          sub.textContent = `${node.type}${visits}`
+          group.append(sub)
+
+          svg.append(group)
+        }
+
+        canvas.append(svg)
+      }
+
+      const GEOM = { NODE_W: 168, NODE_H: 54, COL_GAP: 92, ROW_GAP: 26, PAD: 24 }
+      const NODE_W = GEOM.NODE_W
+      const NODE_H = GEOM.NODE_H
+      const PAD_X = (node) => GEOM.PAD + node.column * (GEOM.NODE_W + GEOM.COL_GAP)
+      const PAD_Y = (node) => GEOM.PAD + node.row * (GEOM.NODE_H + GEOM.ROW_GAP)
+
+      async function main() {
+        if (!sessionId) {
+          showError('No session id in the panel URL: open the graph from a running workflow.')
+          return
+        }
+        try {
+          const state = await rpc('getGraph', { sessionId, workdir, projectId })
+          const execution = state?.execution ?? null
+          if (!execution) {
+            canvas.replaceChildren()
+            const p = document.createElement('p')
+            p.className = 'empty'
+            p.textContent = 'No workflow running in this session yet. Start one and the graph will appear.'
+            canvas.append(p)
+            return
+          }
+
+          titleEl.textContent = execution.workflowName ?? 'Workflow'
+          statusEl.textContent = `· ${execution.status ?? 'unknown'}`
+          if (execution.currentStepName) statusEl.textContent += ` · ${execution.currentStepName}`
+          if (execution.workflowScope) {
+            scopeEl.hidden = false
+            scopeEl.textContent = `scope: ${execution.workflowScope}`
+          }
+          const { iterations, maxIterations, totalIterations } = execution
+          if (typeof iterations === 'number') {
+            const cap = typeof maxIterations === 'number' ? `/${maxIterations}` : ''
+            const total = typeof totalIterations === 'number' && totalIterations > iterations ? ` · ${totalIterations} total` : ''
+            counterEl.textContent = `iteration ${iterations}${cap}${total}`
+          }
+
+          let model = null
+          let gap = ''
+          try {
+            const definition = await fetchDefinition(execution.workflowId, execution.workflowScope)
+            model = buildGraphModel(definition, {
+              currentStepId: execution.currentStepId,
+              stepIterations: execution.stepIterations,
+            })
+            if (!model) gap = 'The workflow definition has no usable steps.'
+          } catch (error) {
+            gap = `Workflow definition unavailable: ${error.message}`
+          }
+
+          if (model) {
+            render(model, execution)
+          } else {
+            showError(gap || 'No graph available.')
+          }
+        } catch (error) {
+          showError(String(error.message ?? error))
+        }
+      }
+
+      main()
+      // Keep the panel live while it stays open (the engine emits events often).
+      setInterval(main, 2000)
+    </script>
+  </body>
+</html>

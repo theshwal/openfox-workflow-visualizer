@@ -13,10 +13,15 @@
  * @typedef {import('./state.js').WorkflowExecutionSnapshot} WorkflowExecutionSnapshot
  */
 
-import { buildComposerNode, buildPanelNodes, createStore, isVisible } from './state.js'
+import { GRAPH_PANEL_ID, buildComposerNode, buildPanelNodes, createStore, isVisible } from './state.js'
+
+export { GRAPH_PANEL_ID }
 
 export const RPC_STATE = 'workflow-visualizer.state'
 export const RPC_GRAPH = 'workflow-visualizer.graph'
+export const RPC_GET_GRAPH = 'getGraph'
+export const GRAPH_HTML = 'src/graph.html'
+export const GRAPH_JS = 'src/graph.js'
 export const PANEL_ID = 'workflow-visualizer-progress'
 export const COMPONENT_ID = 'workflow-visualizer-bar'
 export const ZONE = 'composer.top'
@@ -65,6 +70,26 @@ export function register(registry) {
     order: 0,
     component: { type: 'stack', direction: 'row', gap: 'sm', children: [] },
     contentSource: { kind: 'rpc', method: RPC_STATE, refreshMs: REFRESH_MS },
+  })
+
+  // Engine state for the iframe graph. The iframe resolves the workflow
+  // definition itself through the public /api/workflows catalog (same origin,
+  // authenticated) and sends it through the shared graph model.
+  registry.registerRpc(RPC_GET_GRAPH, (params, context) => {
+    const sessionId = sessionIdOf(params, context)
+    const execution = store.read(sessionId)
+    return { execution: execution ? { ...execution } : null }
+  })
+
+  registry.registerAsset(GRAPH_HTML)
+  registry.registerAsset(GRAPH_JS)
+
+  registry.registerUiPanel({
+    id: GRAPH_PANEL_ID,
+    title: { en: 'Workflow graph', fr: 'Graphe du workflow' },
+    size: 'xl',
+    kind: 'iframe',
+    url: GRAPH_HTML,
   })
 
   registry.registerUiPanel({

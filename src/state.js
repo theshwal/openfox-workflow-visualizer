@@ -6,6 +6,9 @@
  * the plugin never touches the DOM or React internals.
  */
 
+/** Panel id of the iframe graph contributed by this plugin. */
+export const GRAPH_PANEL_ID = 'workflow-visualizer-graph'
+
 /** Workflow statuses that mean "a run is in flight" and deserve the bar. */
 const ACTIVE_STATUSES = new Set(['running', 'waiting'])
 
@@ -174,6 +177,13 @@ export function buildComposerNode(execution) {
   if (counter) {
     children.push({ type: 'text', text: counter, muted: true })
   }
+  children.push({
+    type: 'button',
+    label: { en: 'Graph', fr: 'Graphe' },
+    title: { en: 'Open the workflow graph', fr: 'Ouvrir le graphe du workflow' },
+    variant: 'ghost',
+    action: { kind: 'openPanel', panelId: GRAPH_PANEL_ID },
+  })
   return { type: 'stack', direction: 'row', gap: 'sm', align: 'center', children }
 }
 

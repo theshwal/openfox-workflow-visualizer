@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { COMPONENT_ID, PANEL_ID, REFRESH_MS, RPC_GRAPH, RPC_STATE, ZONE, register } from './index.js'
+import { COMPONENT_ID, GRAPH_PANEL_ID, PANEL_ID, REFRESH_MS, RPC_GET_GRAPH, RPC_GRAPH, RPC_STATE, ZONE, register } from './index.js'
 
 /** Minimal fake of the openfox/plugin v2 registry surface we use. */
 function makeRegistry() {
@@ -7,15 +7,18 @@ function makeRegistry() {
   const rpcs = new Map()
   const components = []
   const panels = []
+  const assets = []
   return {
     hooks,
     rpcs,
     components,
     panels,
+    assets,
     registerHook: vi.fn((event, handler) => hooks.set(event, handler)),
     registerRpc: vi.fn((method, handler) => rpcs.set(method, handler)),
     registerUiComponent: vi.fn((component) => components.push(component)),
     registerUiPanel: vi.fn((panel) => panels.push(panel)),
+    registerAsset: vi.fn((asset) => assets.push(asset)),
   }
 }
 
@@ -51,16 +54,47 @@ describe('plugin registration', () => {
     register(registry)
 
     expect([...registry.hooks.keys()]).toEqual(['workflow.execution.changed'])
-    expect([...registry.rpcs.keys()].sort()).toEqual([RPC_GRAPH, RPC_STATE].sort())
+    expect([...registry.rpcs.keys()].sort()).toEqual([RPC_GET_GRAPH, RPC_GRAPH, RPC_STATE].sort())
   })
 
-  it('declares a declarative panel with an empty-state body', () => {
+  it('declares an iframe graph panel backed by a registered asset', () => {
     const registry = makeRegistry()
     register(registry)
 
-    const panel = registry.panels[0]
+    const graph = registry.panels.find((panel) => panel.id === GRAPH_PANEL_ID)
+    expect(graph).toMatchObject({ kind: 'iframe', url: 'src/graph.html', size: 'xl' })
+    expect(registry.assets).toEqual(expect.arrayContaining(['src/graph.html', 'src/graph.js']))
+  })
+
+  it('keeps a declarative text panel as the fallback', () => {
+    const registry = makeRegistry()
+    register(registry)
+
+    const panel = registry.panels.find((candidate) => candidate.id === PANEL_ID)
     expect(panel).toMatchObject({ id: PANEL_ID, kind: 'declarative' })
     expect(JSON.stringify(panel.content)).toContain('No workflow running')
+  })
+
+  it('serves the engine state to the iframe through getGraph, per session', async () => {
+    const registry = makeRegistry()
+    register(registry)
+    registry.hooks.get('workflow.execution.changed')({ event: 'workflow.execution.changed', sessionId: 's1', data: event })
+
+    const mine = await registry.rpcs.get(RPC_GET_GRAPH)({ sessionId: 's1' }, {})
+    const other = await registry.rpcs.get(RPC_GET_GRAPH)({ sessionId: 's2' }, {})
+
+    expect(mine.execution).toMatchObject({ workflowId: 'default', currentStepId: 'build', iterations: 2 })
+    expect(mine.execution.stepIterations).toEqual({ build: 2 })
+    expect(other.execution).toBeNull()
+  })
+
+  it('accepts the session id from the RPC context (REST route)', async () => {
+    const registry = makeRegistry()
+    register(registry)
+    registry.hooks.get('workflow.execution.changed')({ event: 'workflow.execution.changed', sessionId: 's1', data: event })
+
+    const viaContext = await registry.rpcs.get(RPC_GET_GRAPH)({}, { sessionId: 's1' })
+    expect(viaContext.execution?.executionId).toBe('exec-1')
   })
 })
 
