@@ -46,6 +46,13 @@
       .empty { color: var(--muted); padding: 18px 6px; }
       .error { color: #f87171; padding: 12px 6px; white-space: pre-wrap; }
       .legend { margin-top: 8px; color: var(--muted); font-size: 11px; }
+      .node { cursor: pointer; outline: none; }
+      .node.selected rect { stroke: #38bdf8; stroke-width: 3; }
+      .node:focus-visible rect { stroke: #38bdf8; stroke-width: 3; }
+      .inspector { margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; }
+      .inspector h2 { font-size: 13px; margin: 0 0 6px; }
+      .inspector p { margin: 4px 0; overflow-wrap: anywhere; }
+      .inspector ul { margin: 4px 0 8px; padding-left: 20px; }
     </style>
   </head>
   <body>
@@ -56,9 +63,10 @@
       <span class="meta" id="counter"></span>
     </header>
     <div class="canvas" id="canvas"><p class="empty">Loading…</p></div>
-    <p class="legend">Orange outline = current step · “×N” = runs observed by the engine · edges come from the workflow definition.</p>
+    <section class="inspector" id="inspector" aria-live="polite" hidden></section>
+    <p class="legend">Orange outline = current step · blue outline = selected step · select a node for its details · “×N” = observed runs.</p>
     <script type="module">
-      import { buildGraphModel } from './graph.js'
+      import { buildGraphModel, inspectGraphStep } from './graph.js'
 
       const params = new URLSearchParams(location.search)
       const sessionId = params.get('sessionId') ?? ''
@@ -72,6 +80,11 @@
       const scopeEl = document.getElementById('scope')
       const counterEl = document.getElementById('counter')
       const canvas = document.getElementById('canvas')
+      const inspector = document.getElementById('inspector')
+      let selectedStepId = null
+      // Re-render only when the underlying facts change: a blind 2s re-render
+      // would drop focus and the selection outline on every tick.
+      let lastSignature = ''
 
       // The iframe is sandboxed (opaque origin), so relative URLs do not
       // resolve: derive the host origin from the asset URL itself.
@@ -80,6 +93,7 @@
       const authHeaders = () => (token ? { Authorization: `Bearer ${token}`, 'x-session-token': token } : {})
 
       function showError(message) {
+        inspector.hidden = true
         canvas.replaceChildren()
         const p = document.createElement('p')
         p.className = 'error'
@@ -114,6 +128,36 @@
         return res.json()
       }
 
+      function renderInspector(model) {
+        inspector.replaceChildren()
+        const step = inspectGraphStep(model, selectedStepId)
+        if (!step) { inspector.hidden = true; return }
+        inspector.hidden = false
+        const heading = document.createElement('h2')
+        heading.textContent = step.name
+        inspector.append(heading)
+        const facts = document.createElement('p')
+        facts.textContent = `Type: ${step.type} · ID: ${step.id} · ${step.current ? 'Current step' : 'Not current'} · Runs: ${step.visits ?? 'not reported'}`
+        inspector.append(facts)
+        for (const [label, entries, field] of [['Incoming', step.incoming, 'from'], ['Outgoing', step.outgoing, 'to']]) {
+          const title = document.createElement('p')
+          title.textContent = `${label} transitions (${entries.length})`
+          inspector.append(title)
+          const list = document.createElement('ul')
+          for (const entry of entries) {
+            const item = document.createElement('li')
+            item.textContent = `${entry[field]}${entry.label ? ` — ${entry.label}` : ''}`
+            list.append(item)
+          }
+          if (!entries.length) {
+            const item = document.createElement('li')
+            item.textContent = 'None'
+            list.append(item)
+          }
+          inspector.append(list)
+        }
+      }
+
       function render(model, execution) {
         canvas.replaceChildren()
         const NS = 'http://www.w3.org/2000/svg'
@@ -121,7 +165,9 @@
         svg.setAttribute('viewBox', `0 0 ${model.size.width} ${model.size.height}`)
         svg.setAttribute('width', String(model.size.width))
         svg.setAttribute('height', String(model.size.height))
-        svg.setAttribute('role', 'img')
+        // role="group" (not "img"): the nodes inside are focusable buttons, and
+        // an image role would hide them from assistive technology.
+        svg.setAttribute('role', 'group')
         svg.setAttribute(
           'aria-label',
           `Workflow ${model.workflowName}: ${model.steps.length} steps, current step ${execution.currentStepName ?? 'unknown'}`,
@@ -169,7 +215,18 @@
           group.setAttribute('class', step?.current ? 'node current' : 'node')
           group.setAttribute('transform', `translate(${PAD_X(node)}, ${PAD_Y(node)})`)
           group.setAttribute('data-step-id', node.id)
-          group.setAttribute('role', 'listitem')
+          group.setAttribute('role', 'button')
+          group.setAttribute('tabindex', '0')
+          if (node.id === selectedStepId) group.classList.add('selected')
+          const select = () => {
+            selectedStepId = node.id
+            renderInspector(model)
+            for (const element of svg.querySelectorAll('.node')) element.classList.toggle('selected', element.getAttribute('data-step-id') === selectedStepId)
+          }
+          group.addEventListener('click', select)
+          group.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select() }
+          })
           group.setAttribute(
             'aria-label',
             `${node.name} (${node.type})${step?.current ? ', current step' : ''}${step?.visits !== undefined ? `, ${step.visits} runs` : ''}`,
@@ -198,6 +255,7 @@
         }
 
         canvas.append(svg)
+        renderInspector(model)
       }
 
       const GEOM = { NODE_W: 168, NODE_H: 54, COL_GAP: 92, ROW_GAP: 26, PAD: 24 }
@@ -215,6 +273,7 @@
           const state = await rpc('getGraph', { sessionId, workdir, projectId })
           const execution = state?.execution ?? null
           if (!execution) {
+            inspector.hidden = true
             canvas.replaceChildren()
             const p = document.createElement('p')
             p.className = 'empty'
@@ -239,6 +298,9 @@
 
           let model = null
           let gap = ''
+          const signature = JSON.stringify([execution, execution.workflowId])
+          if (signature === lastSignature) return
+          lastSignature = signature
           try {
             const definition = await fetchDefinition(execution.workflowId, execution.workflowScope)
             model = buildGraphModel(definition, {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildGraphModel, resolveDefinition } from './graph.js'
+import { buildGraphModel, inspectGraphStep, resolveDefinition } from './graph.js'
 
 const definition = {
   metadata: { id: 'default', name: 'Build & Verify', color: '#3b82f6' },
@@ -139,5 +139,22 @@ describe('buildGraphModel', () => {
   it('ignores an invalid colour instead of passing it through to CSS', () => {
     const model = buildGraphModel({ ...definition, metadata: { id: 'wf', name: 'WF', color: 'red;background:url(x)' } })
     expect(model?.color).toBeUndefined()
+  })
+})
+
+describe('inspectGraphStep', () => {
+  it('returns observed counters and real transitions for the selected step', () => {
+    const model = buildGraphModel(definition, { currentStepId: 'verify', stepIterations: { verify: 2 } })!
+    expect(inspectGraphStep(model, 'verify')).toEqual({
+      id: 'verify', name: 'Verifier', type: 'sub_agent', current: true, visits: 2,
+      incoming: [{ from: 'build', label: '' }],
+      outgoing: [{ to: 'done', label: '' }, { to: 'build', label: '' }],
+    })
+  })
+  it('does not return unknown steps or internal workflow fields', () => {
+    const model = buildGraphModel(definition)!
+    expect(inspectGraphStep(model, 'missing')).toBeNull()
+    expect(inspectGraphStep(null, 'verify')).toBeNull()
+    expect(JSON.stringify(inspectGraphStep(model, 'build'))).not.toContain('builder')
   })
 })
