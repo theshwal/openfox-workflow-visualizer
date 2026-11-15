@@ -4,6 +4,8 @@ An **in-chat workflow visualizer for OpenFox**, shipped as a real `openfox/plugi
 
 The diagram you see is **the workflow manager's own component** — `FlowDiagram.tsx` + `layout.ts` vendored verbatim from OpenFox and vendored from the **official** `co-l/openfox` @ `0694574` (MIT) plus one documented, in-tree patch (`src/vendor/runtime-highlight.patch`) — see `src/vendor/PROVENANCE.md`. Fully self-contained: no dependency on any personal branch. The plugin does not re-implement any drawing: it renders that React component inside a plugin panel iframe and feeds it the live runtime facts.
 
+![The 'Workflow graph' button in the composer zone of a normal session](docs/plugin-button-in-chat.png)
+
 ![The workflow manager diagram, rendered by the plugin](docs/plugin-graph-manager.png)
 
 ---
@@ -12,6 +14,7 @@ The diagram you see is **the workflow manager's own component** — `FlowDiagram
 
 1. **Composer bar** (`composer.top` zone, `registerUiComponent` + RPC content source refreshed every 1.5 s):
    `● Build & Verify · Where to work · iteration 3/50` — plus a **Graph** button. Nothing is rendered when no workflow runs.
+1. **Entry point** — the button is **always visible** in `composer.top` (even with no workflow running), labelled *Workflow graph*, 124×30 px, `shrink-0` so the zone's other contributions can never squeeze it out.
 2. **Graph panel** (`kind: 'iframe'`, `registerAsset` + `registerUiPanel`): an SVG diagram built from the **real workflow definition** — one node per step, one edge per transition (labels taken from the transition condition), the current step outlined in orange, and `×N` badges with the per-step run counts reported by the engine.
 3. **Text panel** (`kind: 'declarative'`): the same facts as key/value + table, for environments where the iframe cannot reach the API.
 
