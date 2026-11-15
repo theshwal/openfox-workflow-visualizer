@@ -103,7 +103,8 @@ describe('hook + rpc integration', () => {
     const registry = makeRegistry()
     register(registry)
     const state = await registry.rpcs.get(RPC_STATE)({ sessionId: 's1' }, {})
-    expect(state).toMatchObject({ content: { type: 'stack', children: [] } })
+    // No run yet: the entry point stays visible so the feature is discoverable.
+    expect(JSON.stringify(state.content)).toContain('Workflow graph')
   })
 
   it('serves the live run to the zone context of its own session only', async () => {
@@ -116,7 +117,8 @@ describe('hook + rpc integration', () => {
 
     expect(JSON.stringify(mine.content)).toContain('Build & Verify')
     expect(JSON.stringify(mine.content)).toContain('iteration 2/50')
-    expect(other).toMatchObject({ content: { type: 'stack', children: [] } })
+    expect(JSON.stringify(other.content)).toContain('Workflow graph')
+    expect(JSON.stringify(other.content)).not.toContain('Build & Verify')
   })
 
   it('serves the panel body from the same cached execution', async () => {
@@ -133,6 +135,6 @@ describe('hook + rpc integration', () => {
     const registry = makeRegistry()
     register(registry)
     const state = await registry.rpcs.get(RPC_STATE)({}, {})
-    expect(state).toMatchObject({ content: { type: 'stack', children: [] } })
+    expect(JSON.stringify(state.content)).toContain('Workflow graph')
   })
 })

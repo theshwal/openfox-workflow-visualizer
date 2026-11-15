@@ -88,9 +88,10 @@ describe('iteration label', () => {
 })
 
 describe('composer contribution', () => {
-  it('renders an empty stack when no workflow is running', () => {
+  it('always exposes an entry point, even without a running workflow', () => {
     const node = buildComposerNode(null)
-    expect(node).toMatchObject({ type: 'stack', children: [] })
+    expect(JSON.stringify(node)).toContain('Workflow graph')
+    expect(JSON.stringify(node)).toContain('openPanel')
   })
 
   it('renders workflow name, step and counter for an active run', () => {
@@ -103,11 +104,10 @@ describe('composer contribution', () => {
     expect(labels).toContain('iteration 3/50')
   })
 
-  it('stays empty once the run is completed', () => {
-    expect(buildComposerNode({ ...baseEvent, status: 'completed', updatedAt: 0 })).toMatchObject({
-      type: 'stack',
-      children: [],
-    })
+  it('falls back to the entry point once the run is completed', () => {
+    const node = buildComposerNode({ ...baseEvent, status: 'completed', updatedAt: 0 })
+    expect(JSON.stringify(node)).toContain('Workflow graph')
+    expect(JSON.stringify(node)).not.toContain('Build & Verify')
   })
 })
 

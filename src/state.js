@@ -158,8 +158,29 @@ export function stepRows(execution) {
  * @returns {Record<string, unknown>}
  */
 export function buildComposerNode(execution) {
-  if (!isVisible(execution) || execution === null) {
-    return { type: 'stack', direction: 'row', gap: 'sm', children: [] }
+  const active = isVisible(execution) && execution !== null
+  if (!active) {
+    // Always render an entry point: a workflow that is not running yet must not
+    // hide the feature. The label says what will happen, and the panel explains
+    // the empty state.
+    return {
+      type: 'stack',
+      direction: 'row',
+      gap: 'sm',
+      align: 'center',
+      children: [
+        {
+          type: 'button',
+          label: { en: 'Workflow graph', fr: 'Graphe du workflow' },
+          title: {
+            en: 'Open the workflow graph — no workflow is running in this session yet',
+            fr: 'Ouvrir le graphe du workflow — aucun workflow ne tourne dans cette session',
+          },
+          variant: 'pill',
+          action: { kind: 'openPanel', panelId: GRAPH_PANEL_ID },
+        },
+      ],
+    }
   }
   /** @type {Record<string, unknown>[]} */
   const children = [
