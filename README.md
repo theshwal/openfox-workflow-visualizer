@@ -2,7 +2,7 @@
 
 An **in-chat workflow visualizer for OpenFox**, shipped as a real `openfox/plugin` **API v2** package.
 
-The diagram you see is **the workflow manager's own component** — `FlowDiagram.tsx` + `layout.ts` vendored verbatim from OpenFox and pinned to an upstream SHA (see `src/vendor/PROVENANCE.md`). The plugin does not re-implement any drawing: it renders that React component inside a plugin panel iframe and feeds it the live runtime facts.
+The diagram you see is **the workflow manager's own component** — `FlowDiagram.tsx` + `layout.ts` vendored verbatim from OpenFox and vendored from the **official** `co-l/openfox` @ `0694574` (MIT) plus one documented, in-tree patch (`src/vendor/runtime-highlight.patch`) — see `src/vendor/PROVENANCE.md`. Fully self-contained: no dependency on any personal branch. The plugin does not re-implement any drawing: it renders that React component inside a plugin panel iframe and feeds it the live runtime facts.
 
 ![The workflow manager diagram, rendered by the plugin](docs/plugin-graph-manager.png)
 
