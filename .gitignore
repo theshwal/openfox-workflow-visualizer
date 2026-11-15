@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Isolated native source checkout used only for reference/behaviour checks
+.upstream/
+
+# Local verification artefacts (screenshots, logs, proofs)
+.artifacts/
+
+# Build output (the host compiles/loads the ESM entry directly)
+dist/
+
+# OS / editor
+.DS_Store
+*.log

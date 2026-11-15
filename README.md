@@ -1,97 +1,130 @@
 # OpenFox Workflow Visualizer
 
-> **Status: native OpenFox feature validated locally; standalone community plugin not yet packaged.**
+An **in-chat workflow indicator for OpenFox**, shipped as a real `openfox/plugin` **API v2** package: when a workflow runs, the plugin shows the workflow name, the current step and the engine's exact iteration counters **above the chat composer** — no React patching, no DOM hacking, no monkey patching.
 
-A compact, read-only view of an OpenFox workflow while it runs: see the current step, execution graph, and iteration counters directly from the chat, without opening the workflow editor.
+> Status: **v0.1.0 — working, installable plugin, early.** The full graphical diagram (nodes + edges + active highlight) exists as a **native core feature** and is proposed upstream in [co-l/openfox#465](https://github.com/co-l/openfox/pull/465) (draft). This repository is the plugin that works **today**, within the current plugin contract.
 
-**Français :** visualisation en direct de l'étape active, du graphe et des compteurs d'itérations des workflows OpenFox. L'implémentation actuelle est **native** et n'est pas encore un plugin installable depuis le Hub.
-
-## Screenshot (real Chromium / Playwright run)
-
-![Live workflow visualization: Build & Verify graph and active step](https://raw.githubusercontent.com/theshwal/openfox/feat/workflow-visualizer-native/docs/images/workflow-visualizer.png)
-
-Captured from a locally built OpenFox branch with a mock LLM. The upstream [draft PR #465](https://github.com/co-l/openfox/pull/465) contains the implementation and validation caveats.
+---
 
 ## What it does
 
-- Shows a compact **WorkflowBar** in the chat while a workflow executes.
-- Opens the workflow graph on hover, click, or keyboard interaction.
-- Highlights the active workflow step and displays iteration progress.
-- Preserves iteration information across workflow state updates.
-- Resolves the actual workflow scope instead of displaying a shadowing definition.
-- Keeps the visualizer read-only, with minimal additional server notifications.
+- Contributes a **`composer.top`** zone component (above the composer) through `registerUiComponent` + an RPC content source refreshed every 1.5 s.
+- Listens to the **`workflow.execution.changed`** hook to cache, **per session**, the engine's own values: workflow name, status, current step, `iterations`, `totalIterations`, `maxIterations`, `stepIterations`, `workflowScope`.
+- Shows **nothing** when no workflow is running (the zone stays empty — no reserved space).
+- Ships a **declarative panel** ("Workflow progress") listing the engine-observed per-step run counts, with the current step marked.
+- Never invents data: an absent counter stays absent; an unknown step count is reported as unknown.
 
-The visualizer is an interface aid, **not** a workflow executor or an automation engine.
+### What it does *not* do (honest limits)
 
-## Architecture and compatibility
-
-The first implementation modifies the OpenFox core (React UI, workflow execution state, server events). The current `openfox/plugin` API v2 supports declarative UI slots, panels and iframe assets, but **does not let a plugin replace arbitrary React internals**. A package consisting only of a manifest or README would therefore not provide this experience.
-
-**Consequently, this repository is not yet installable as an OpenFox plugin.** Do not attempt `npm install openfox-workflow-visualizer` or install this repository from the Plugins tab until a working v2 entry point has been implemented and tested.
-
-Native implementation: **[OpenFox upstream draft PR #465](https://github.com/co-l/openfox/pull/465)**, from [theshwal's feature branch](https://github.com/theshwal/openfox/tree/feat/workflow-visualizer-native) to `co-l/openfox:develop`. This code has not been merged or released yet; compatibility with an official released OpenFox version is not claimed.
-
-## Verification
-
-The native implementation has been checked with:
-
-| Verification | Result |
+| Limitation | Reason |
 | --- | --- |
-| Targeted component / server tests | 150 passed |
-| TypeScript (server and web) | Passed |
-| ESLint | Passed |
-| Acceptance criteria | 12 / 12 |
-| Independent code-review findings | 9 / 9 resolved |
-| Chromium / Playwright E2E (local patched build, mock provider) | Passed, exit code 0 |
+| No SVG diagram / edges | Panel content in API v2 is static (`content: DeclarativeNode[]`), it has no RPC content source; an iframe panel would need an RPC bridge that the contract does not expose yet. The visual graph is proposed natively in upstream PR #465. |
+| The bar can appear after the first workflow event | The hook cache lives in the plugin process; on host restart the bar repopulates at the next `workflow.execution.changed`. There is no public "read the current execution" API for plugins yet. |
+| Counters appear when the event carries them | Some early events (e.g. `startWorkflow`) carry no counters; the counter line then appears at the next step event. |
+| `reinstall` does not refresh a changed source | Use **uninstall → install** to pick up plugin code changes (host behaviour, verified). |
 
-The E2E scenario launched a workflow through the chat, displayed the workflow bar, opened its SVG graph, confirmed the active step and iteration counter, and exercised click and Escape interactions. Screenshots and the `result.json` report were generated on the OpenFox Lab development machine.
+Both gaps are addressed by a small, generic proposal at the end of this README.
 
-**Not yet demonstrated by that E2E:** actual resume after a pause, browser reload, multi-session isolation, or a production deployment. The E2E used a temporary local server with an in-memory database and a mock LLM provider.
+---
 
-## How to try the native version
+## Compatibility
 
-For contributors who want to evaluate the patch **before it merges upstream**:
+- **OpenFox ≥ 2.0.161** (`peerDependencies`), plugin **`apiVersion: 2`**.
+- Verified against a locally built OpenFox `develop` @ `0694574` (the tree used for PR #465): plugin loaded, enabled, disabled, re-enabled and uninstalled through the real API; RPC served live workflow data in a real Chromium session.
+- Uses only: `registerHook`, `registerRpc`, `registerUiComponent`, `registerUiPanel`. No `registerUiOverride`, no assets, no tools, no network, no telemetry.
 
-1. Review [upstream draft PR #465](https://github.com/co-l/openfox/pull/465) and the [feature branch](https://github.com/theshwal/openfox/tree/feat/workflow-visualizer-native) before running code.
-2. Build and run it using the matching instructions and runtime requirements in the [OpenFox repository](https://github.com/co-l/openfox).
-3. Open a session and launch a workflow such as `Build & Verify`; the bar and diagram appear while the workflow executes.
+## Installation
 
-This is a **source build**, not a Plugins-tab installation.
+### From Settings → Plugins (GitHub URL)
 
-## Roadmap to the Community Hub
+1. Open **Settings → Plugins**.
+2. **Install from GitHub** and paste:
 
-- [x] Prototype and validate the native behavior.
-- [x] Validate an actual browser interaction with Chromium and capture screenshots.
-- [ ] Complete upstream native-feature review and integration.
-- [ ] Design a **genuinely installable** plugin around supported `openfox/plugin` v2 UI / RPC / asset contracts, or have the host expose the minimal extension point needed.
-- [ ] Add a versioned `package.json` with an accurate `openfox.apiVersion: 2`, capabilities and ESM entry point **when functional code exists**.
-- [ ] Test installation, enable/disable/re-enable, and uninstall on a fresh OpenFox instance.
-- [ ] Add a plugin-specific README screenshot/GIF, automated tests, release notes and a license.
-- [ ] Make the distributable repository public when approved.
-- [ ] Propose a curated listing by pull request to the official `plugins-registry.json` with name, displayName, description and githubUrl.
+   ```
+   https://github.com/theshwal/openfox-workflow-visualizer
+   ```
 
-### Community Hub visibility
+3. Enable the plugin, then start any workflow. The bar appears above the composer.
 
-An integration / discoverability proposal has been opened with the Community Hub maintainers: **[JamesDAdams/openfox-community-hub issue #1](https://github.com/JamesDAdams/openfox-community-hub/issues/1)**.
+### From a local checkout (development)
 
-The [OpenFox Community Hub](https://github.com/JamesDAdams/openfox-community-hub) distributes workflow, agent, skill, command and MCP **packs**. It does not currently list standalone plugin packages, so the visualizer cannot yet appear as an installable Hub pack. Issue #1 asks for a separately labeled *Plugins / Projects in development* discovery section, or a related-project link, with an explicit non-installable status. This issue is a public proposal, **not a published Hub listing or an accepted integration**.
+```bash
+git clone https://github.com/theshwal/openfox-workflow-visualizer
+# then, in OpenFox: Settings → Plugins → Install from path
+#   /absolute/path/to/openfox-workflow-visualizer
+# or through the API:
+curl -X POST http://localhost:<port>/api/plugins/install \
+  -H 'content-type: application/json' \
+  -d '{"path":"/absolute/path/to/openfox-workflow-visualizer"}'
+```
 
-Because this project repository is currently private, other community users cannot browse it until its visibility is changed. The [native OpenFox draft PR #465](https://github.com/co-l/openfox/pull/465) is public and provides the code, screenshot and verification evidence.
+> Do **not** use `hub_install` for this plugin: the Community Hub registry indexes workflow/agent/skill/MCP **packs**, not plugin packages.
 
-## Privacy and security
+## Usage
 
-The visualizer displays workflow/session metadata already used by OpenFox. It does not need external telemetry or a third-party service. The E2E verification used synthetic test data and a mock LLM. As with other OpenFox plugins, any future v2 package runs in-process and must be reviewed before installation.
+Start a workflow (chat slash command such as `/default`, or the workflow launcher). While it runs:
+
+- **Above the composer**: `Build & Verify · <current step> · iteration 3/50` — a resumed run also shows `· 12 total`.
+- **Panel "Workflow progress"**: status, scope, and the per-step run counts reported by the engine.
+
+## Tests
+
+```bash
+npm install
+npm test          # 22 unit/integration tests, no host required
+npm pack --dry-run
+```
+
+Coverage: registry registration (zone, RPC, hook, panel), RPC ↔ hook integration, per-session isolation, late-event rejection from a replaced execution, empty state, counter formatting (cap, cumulative total, singular), step ordering, and "never invent a counter".
+
+Real-environment verification (outside this repo's test suite):
+
+- Plugin installed from path on an isolated OpenFox instance (mock LLM, in-memory DB): `loaded: true`, `apiVersion: 2`.
+- Lifecycle: `disable` → `enable` → `uninstall` → `install` all HTTP 200.
+- Chromium (Playwright) run launching a real workflow: the plugin RPC returned `{"type":"badge","label":{"en":"Build & Verify"},"tone":"info"}` plus the current step — i.e. the hook → cache → RPC → zone chain works end to end. Screenshot: [`docs/plugin-in-chat.png`](docs/plugin-in-chat.png).
+
+## Privacy & security
+
+- **No network calls**, no telemetry, no analytics, no remote code.
+- Reads only the hook payloads the host already broadcasts; caches them **in memory**, keyed by session id. Nothing is written to disk, no secrets, no environment access.
+- Renders exclusively through the host's declarative node renderer: no HTML injection, no `eval`, no DOM access.
+- Least privilege: declares only `ui`, `hooks`, `rpc`.
+
+## Architecture
+
+```
+src/index.js   register(registry): hook + 2 RPCs + composer.top component + panel
+src/state.js   pure cache + declarative view builders (unit-tested, host-free)
+```
+
+The plugin is a thin, honest adapter over the v2 contract — see [`docs/PLUGINS.md`](https://github.com/co-l/openfox/blob/develop/docs/PLUGINS.md) upstream.
+
+### Proposed generic extension point (for the OpenFox core team)
+
+Two small additions would close the gaps above without any per-plugin hacks:
+
+1. `PluginUiPanel.contentSource?: PluginUiContentSource` — lets a panel refresh from RPC, enabling a live declarative graph.
+2. A read-only `context.sessions.activeWorkflow(sessionId)` (or an RPC-visible snapshot) — lets a plugin restore its bar after a host reload without waiting for the next event.
+
+## Roadmap
+
+- [ ] Live graph panel (SVG) once panels support `contentSource`, or via a documented iframe RPC bridge.
+- [ ] Restore state on host reload (needs the read API above).
+- [ ] Optional badge / notification on workflow completion.
+- [ ] Publish to the Community Hub "Related OpenFox plugins" section once the install flow is battle-tested.
+
+## Relationship to upstream PR #465
+
+[co-l/openfox#465](https://github.com/co-l/openfox/pull/465) is a **native core** feature (WorkflowBar in chat, SVG graph, iteration persistence, scope propagation). It is a **draft**, not merged, and not required by this plugin. This plugin reproduces the *behaviour that the current plugin API allows*, and documents what only a native change can deliver.
 
 ## Contributing
 
-Contributions and usability reports are welcome. Please keep native OpenFox changes in the upstream pull request and separate plugin packaging work in this repository. Include reproducible tests for behavior changes, and do not commit secrets, local session databases, Playwright caches or generated test logs.
+Issues and PRs welcome. Please:
+
+- keep the plugin dependency-free at runtime (ESM only, no bundler),
+- add a unit test for every behaviour change (`npm test`),
+- never widen capabilities without documenting why.
 
 ## License
 
-**Not yet selected for this standalone repository.** Community redistribution should wait until an appropriate license is explicitly added. The native upstream contribution is subject to the upstream repository's applicable contribution and licensing requirements.
-
-## References
-
-- [OpenFox plugin authoring guide](https://github.com/co-l/openfox/blob/develop/docs/PLUGINS.md)
-- [OpenFox plugin architecture](https://github.com/co-l/openfox/blob/develop/docs/PLUGIN-ARCHITECTURE.md)
-- [OpenFox curated plugin registry](https://github.com/co-l/openfox/blob/develop/plugins-registry.json)
+MIT — see [LICENSE](LICENSE).

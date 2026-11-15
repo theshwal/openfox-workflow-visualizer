@@ -1,0 +1,40 @@
+{
+  "name": "openfox-workflow-visualizer",
+  "version": "0.1.0",
+  "description": "In-chat OpenFox workflow visualizer: live step, iteration counters and per-step progression, contributed through the openfox/plugin v2 composer.top zone.",
+  "type": "module",
+  "main": "./src/index.js",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "keywords": [
+    "openfox",
+    "openfox-plugin",
+    "workflow",
+    "visualizer"
+  ],
+  "license": "MIT",
+  "openfox": {
+    "apiVersion": 2,
+    "entry": "./src/index.js",
+    "displayName": "Workflow Visualizer",
+    "description": "Shows the running workflow, its current step and the engine's exact iteration counters above the chat composer.",
+    "capabilities": [
+      "ui",
+      "hooks",
+      "rpc"
+    ],
+    "timeoutMs": 15000
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "openfox": ">=2.0.161"
+  }
+}
