@@ -20,6 +20,7 @@ Data comes exclusively from the **`workflow.execution.changed`** hook (engine tr
 
 ![Current standalone plugin composer bar (v0.2.0)](docs/plugin-bar.png)
 ![Current standalone plugin graph (v0.2.0)](docs/plugin-graph.svg.png)
+![Step inspector: click or keyboard-select a node](docs/plugin-step-inspector.png)
 
 ### How the iframe gets its data (the part people get wrong)
 
@@ -74,7 +75,7 @@ Coverage: registration (zone, RPCs, hook, assets, panels), hook→RPC integratio
 Real-environment verification (isolated OpenFox instance, mock LLM, in-memory DB):
 
 - `install` → `loaded: true`, `version 0.2.0`, capabilities `['ui','hooks','rpc','assets']`; `disable`/`enable`/`uninstall` HTTP 200.
-- Chromium (Playwright): workflow launched from chat → plugin bar appeared → **Graph** clicked → iframe rendered `svg[role="img"]` with **7 nodes, 10 edges**, `aria-label="Workflow Build & Verify: 7 steps, current step Where to work"`, current node `work_location` marked `.current`. Screenshots: `docs/plugin-graph-panel.png`, `docs/plugin-graph.svg.png`.
+- Chromium (Playwright): workflow launched from chat → plugin bar appeared → **Graph** clicked → iframe rendered `svg[role="group"]` with **7 nodes, 10 edges**, `aria-label="Workflow Build & Verify: 7 steps, current step Where to work"`, current node `work_location` marked `.current`; clicking the `build` node opened the inspector with its 4 incoming and 2 outgoing transitions. Screenshots: `docs/plugin-graph-panel.png`, `docs/plugin-graph.svg.png`, `docs/plugin-step-inspector.png`.
 
 ## Known limits (honest)
 

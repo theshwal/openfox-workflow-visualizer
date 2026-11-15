@@ -82,6 +82,9 @@
       const canvas = document.getElementById('canvas')
       const inspector = document.getElementById('inspector')
       let selectedStepId = null
+      // Re-render only when the underlying facts change: a blind 2s re-render
+      // would drop focus and the selection outline on every tick.
+      let lastSignature = ''
 
       // The iframe is sandboxed (opaque origin), so relative URLs do not
       // resolve: derive the host origin from the asset URL itself.
@@ -162,7 +165,9 @@
         svg.setAttribute('viewBox', `0 0 ${model.size.width} ${model.size.height}`)
         svg.setAttribute('width', String(model.size.width))
         svg.setAttribute('height', String(model.size.height))
-        svg.setAttribute('role', 'img')
+        // role="group" (not "img"): the nodes inside are focusable buttons, and
+        // an image role would hide them from assistive technology.
+        svg.setAttribute('role', 'group')
         svg.setAttribute(
           'aria-label',
           `Workflow ${model.workflowName}: ${model.steps.length} steps, current step ${execution.currentStepName ?? 'unknown'}`,
@@ -293,6 +298,9 @@
 
           let model = null
           let gap = ''
+          const signature = JSON.stringify([execution, execution.workflowId])
+          if (signature === lastSignature) return
+          lastSignature = signature
           try {
             const definition = await fetchDefinition(execution.workflowId, execution.workflowScope)
             model = buildGraphModel(definition, {
