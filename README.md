@@ -6,6 +6,12 @@ A compact, read-only view of an OpenFox workflow while it runs: see the current 
 
 **Français :** visualisation en direct de l'étape active, du graphe et des compteurs d'itérations des workflows OpenFox. L'implémentation actuelle est **native** et n'est pas encore un plugin installable depuis le Hub.
 
+## Screenshot (real Chromium / Playwright run)
+
+![Live workflow visualization: Build & Verify graph and active step](https://raw.githubusercontent.com/theshwal/openfox/feat/workflow-visualizer-native/docs/images/workflow-visualizer.png)
+
+Captured from a locally built OpenFox branch with a mock LLM. The upstream [draft PR #465](https://github.com/co-l/openfox/pull/465) contains the implementation and validation caveats.
+
 ## What it does
 
 - Shows a compact **WorkflowBar** in the chat while a workflow executes.
@@ -23,7 +29,7 @@ The first implementation modifies the OpenFox core (React UI, workflow execution
 
 **Consequently, this repository is not yet installable as an OpenFox plugin.** Do not attempt `npm install openfox-workflow-visualizer` or install this repository from the Plugins tab until a working v2 entry point has been implemented and tested.
 
-Native implementation: [feature branch in the OpenFox fork](https://github.com/theshwal/openfox/tree/feat/workflow-visualizer-native). This branch is intended to be submitted as a pull request to [co-l/openfox](https://github.com/co-l/openfox), targeting `develop`. No release/version compatibility claim is made before upstream review.
+Native implementation: **[OpenFox upstream draft PR #465](https://github.com/co-l/openfox/pull/465)**, from [theshwal's feature branch](https://github.com/theshwal/openfox/tree/feat/workflow-visualizer-native) to `co-l/openfox:develop`. This code has not been merged or released yet; compatibility with an official released OpenFox version is not claimed.
 
 ## Verification
 
@@ -46,7 +52,7 @@ The E2E scenario launched a workflow through the chat, displayed the workflow ba
 
 For contributors who want to evaluate the patch **before it merges upstream**:
 
-1. Review the [native feature branch](https://github.com/theshwal/openfox/tree/feat/workflow-visualizer-native) and its pull request before running code.
+1. Review [upstream draft PR #465](https://github.com/co-l/openfox/pull/465) and the [feature branch](https://github.com/theshwal/openfox/tree/feat/workflow-visualizer-native) before running code.
 2. Build and run it using the matching instructions and runtime requirements in the [OpenFox repository](https://github.com/co-l/openfox).
 3. Open a session and launch a workflow such as `Build & Verify`; the bar and diagram appear while the workflow executes.
 
