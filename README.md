@@ -70,7 +70,13 @@ This is a **source build**, not a Plugins-tab installation.
 - [ ] Make the distributable repository public when approved.
 - [ ] Propose a curated listing by pull request to the official `plugins-registry.json` with name, displayName, description and githubUrl.
 
-The [OpenFox Community Hub](https://github.com/JamesDAdams/openfox-community-hub) also distributes workflow, agent, skill and command content. This native UI feature is not one of those shareable content packs, and should not be listed there as though it were.
+### Community Hub visibility
+
+An integration / discoverability proposal has been opened with the Community Hub maintainers: **[JamesDAdams/openfox-community-hub issue #1](https://github.com/JamesDAdams/openfox-community-hub/issues/1)**.
+
+The [OpenFox Community Hub](https://github.com/JamesDAdams/openfox-community-hub) distributes workflow, agent, skill, command and MCP **packs**. It does not currently list standalone plugin packages, so the visualizer cannot yet appear as an installable Hub pack. Issue #1 asks for a separately labeled *Plugins / Projects in development* discovery section, or a related-project link, with an explicit non-installable status. This issue is a public proposal, **not a published Hub listing or an accepted integration**.
+
+Because this project repository is currently private, other community users cannot browse it until its visibility is changed. The [native OpenFox draft PR #465](https://github.com/co-l/openfox/pull/465) is public and provides the code, screenshot and verification evidence.
 
 ## Privacy and security
 
