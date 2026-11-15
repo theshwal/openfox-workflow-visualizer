@@ -4,10 +4,9 @@ An **in-chat workflow visualizer for OpenFox**, shipped as a real `openfox/plugi
 
 When a workflow runs it shows, **above the chat composer**, the workflow name, the current step and the engine's exact iteration counters — and a **"Graph" button that opens a real workflow diagram** (steps, transitions, current-step highlight, per-step run counts) rendered as SVG inside a plugin iframe panel. No React patching, no DOM hacking, no monkey patching.
 
-![Workflow graph panel](docs/plugin-graph-panel.png)
+![Current standalone plugin graph panel (v0.2.0, not the target design)](docs/plugin-graph-panel.png)
 
-> Status: **v0.2.0 — working, installable, graph included.** A richer native implementation (persistent counters, scope propagation, in-chat SVG bar) is proposed separately upstream in [co-l/openfox#465](https://github.com/co-l/openfox/pull/465) (draft). **This plugin does not depend on it** and works on any host exposing the v2 plugin contract.
-
+> Status: **v0.2.0 — standalone plugin implementation.** The target user experience is the integrated, hover-accessible workflow graph demonstrated in the [reference screenshot](https://github.com/theshwal/openfox/blob/feat/workflow-visualizer-native/docs/images/workflow-visualizer.png). That image depicts a native prototype, **not** the current plugin UI. The plugin must reach this design through supported extension APIs, not an upstream core change.
 ---
 
 ## What it does
@@ -19,8 +18,8 @@ When a workflow runs it shows, **above the chat composer**, the workflow name, t
 
 Data comes exclusively from the **`workflow.execution.changed`** hook (engine truth) and from the host's own workflow endpoints. Nothing is synthesized.
 
-![Composer bar with Graph button](docs/plugin-bar.png)
-![Graph only](docs/plugin-graph.svg.png)
+![Current standalone plugin composer bar (v0.2.0)](docs/plugin-bar.png)
+![Current standalone plugin graph (v0.2.0)](docs/plugin-graph.svg.png)
 
 ### How the iframe gets its data (the part people get wrong)
 
@@ -108,12 +107,13 @@ src/graph.html  iframe panel: RPC + definition fetch, SVG rendering
 - [x] Click or keyboard-select a node to inspect safe step metadata and transitions.
 - [ ] Optional agent/output inspector with explicit host permissions and redaction.
 - [ ] Restore state after a host reload once a read API exists.
-- [ ] Publish in the Community Hub "Related OpenFox plugins" section (docs PR opened).
+- [ ] Publish as a standalone plugin in the Community Hub's related-plugins section (docs proposal pending).
+- [ ] Match the integrated hover/graph experience from the reference screenshot using plugin extension points where possible.
 - [ ] Optional completion notification.
 
-## Relationship to upstream PR #465
+## Plugin-only architecture
 
-[co-l/openfox#465](https://github.com/co-l/openfox/pull/465) is a **native core** feature (persistent counters in chat, scope propagation, built-in SVG bar). It is a **draft**, not merged, and **not required** by this plugin. This repository is the plugin that works today within the published v2 contract, and documents where the contract could go further.
+This project is the sole implementation and distribution target. No changes to the OpenFox core are planned or required for the current release. The reference screenshot from an earlier native prototype documents desired UX, not a dependency or a claim that the current iframe matches it. New work belongs in this plugin; compatibility limitations should be documented explicitly rather than silently shifting development upstream.
 
 ## Contributing
 
