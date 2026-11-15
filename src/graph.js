@@ -40,6 +40,16 @@ const PAD = 24
 /** Only these step types are accepted; anything else renders as 'unknown'. */
 const STEP_TYPES = new Set(['agent', 'sub_agent', 'shell', 'user', 'parallel'])
 
+/** Node accent colours, ported from the native FlowDiagram's resolveAgent(). */
+export const TYPE_COLORS = {
+  agent: '#3b82f6',
+  sub_agent: '#a855f7',
+  user: '#f59e0b',
+  parallel: '#06b6d4',
+  shell: '#22c55e',
+  unknown: '#8b949e',
+}
+
 /**
  * Workflow definitions use `{ when, goto }`; older/hand-written ones use
  * `{ to }`. Both are accepted, anything else is ignored (no invented edges).
@@ -120,10 +130,12 @@ export function buildGraphModel(definition, runtime = {}) {
     const next = transitions
       .map((transition) => targetOf(transition))
       .filter((target) => target !== null && ids.has(target))
+    const type = typeof step.type === 'string' && STEP_TYPES.has(step.type) ? step.type : 'unknown'
     return {
       id,
       name: typeof step.name === 'string' && step.name ? step.name : id,
-      type: typeof step.type === 'string' && STEP_TYPES.has(step.type) ? step.type : 'unknown',
+      type,
+      color: TYPE_COLORS[type],
       next,
       ...(typeof counts[id] === 'number' ? { visits: counts[id] } : {}),
       ...(id === currentStepId ? { current: true } : {}),

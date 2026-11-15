@@ -127,6 +127,14 @@ describe('buildGraphModel', () => {
     expect(model?.nodes[1].column).toBeGreaterThan(model?.nodes[0].column ?? 0)
   })
 
+  it('tags each step with the native type colour', () => {
+    const model = buildGraphModel(definition, {})!
+    const byId = new Map(model.steps.map((step) => [step.id, step]))
+    expect(byId.get('build')?.color).toBe('#3b82f6')
+    expect(byId.get('verify')?.color).toBe('#a855f7')
+    expect(byId.get('work_location')?.color).toBe('#f59e0b')
+  })
+
   it('produces deterministic geometry and a positive canvas size', () => {
     const first = buildGraphModel(definition, {})
     const second = buildGraphModel(definition, {})

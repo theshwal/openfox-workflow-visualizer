@@ -5,23 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Workflow graph</title>
     <style>
+      /* Palette ported from the native FlowDiagram (dark, GitHub-like). */
       :root {
-        color-scheme: dark light;
-        --bg: #0f1115;
-        --fg: #e6e8ee;
-        --muted: #9aa3b2;
-        --border: #2a2f3a;
+        --bg: #0d1117;
+        --fg: #e6edf3;
+        --muted: #8b949e;
+        --border: #484f58;
+        --node: #1c2128;
         --accent: #f59e0b;
-        --node: #1a1f29;
-      }
-      @media (prefers-color-scheme: light) {
-        :root {
-          --bg: #ffffff;
-          --fg: #16181d;
-          --muted: #5b6472;
-          --border: #d8dde5;
-          --node: #f4f6f9;
-        }
+        --select: #58a6ff;
       }
       * { box-sizing: border-box; }
       body {
@@ -35,20 +27,21 @@
       h1 { font-size: 14px; margin: 0; font-weight: 600; }
       .meta { color: var(--muted); }
       .pill { border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; color: var(--muted); }
-      .canvas { overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: transparent; }
+      .canvas { overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: #0d1117; }
       svg { display: block; max-width: 100%; height: auto; }
-      .node rect { fill: var(--node); stroke: var(--border); stroke-width: 1.5; rx: 10; }
+      .node rect { fill: var(--node); stroke: var(--border); stroke-width: 1.5; rx: 8; }
       .node.current rect { stroke: var(--accent); stroke-width: 2.5; }
+      .node.selected rect { stroke: var(--select); stroke-width: 2.5; }
       .node text { fill: var(--fg); font-size: 12px; }
       .node .sub { fill: var(--muted); font-size: 10px; }
-      .edge { stroke: var(--muted); stroke-width: 1.4; fill: none; opacity: 0.75; }
+      .edge { stroke: var(--border); stroke-width: 1.4; fill: none; }
       .edge-label { fill: var(--muted); font-size: 9px; }
+      body { background: var(--bg); color: var(--fg); }
       .empty { color: var(--muted); padding: 18px 6px; }
       .error { color: #f87171; padding: 12px 6px; white-space: pre-wrap; }
       .legend { margin-top: 8px; color: var(--muted); font-size: 11px; }
       .node { cursor: pointer; outline: none; }
-      .node.selected rect { stroke: #38bdf8; stroke-width: 3; }
-      .node:focus-visible rect { stroke: #38bdf8; stroke-width: 3; }
+      .node:focus-visible rect { stroke: var(--select); stroke-width: 3; }
       .inspector { margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; }
       .inspector h2 { font-size: 13px; margin: 0 0 6px; }
       .inspector p { margin: 4px 0; overflow-wrap: anywhere; }
@@ -235,6 +228,8 @@
           const rect = document.createElementNS(NS, 'rect')
           rect.setAttribute('width', String(NODE_W))
           rect.setAttribute('height', String(NODE_H))
+          // Per-type accent border, like the native diagram (current step wins).
+          if (step?.color && !step.current) rect.setAttribute('stroke', step.color)
           group.append(rect)
 
           const label = document.createElementNS(NS, 'text')

@@ -21,6 +21,7 @@ Data comes exclusively from the **`workflow.execution.changed`** hook (engine tr
 ![Current standalone plugin composer bar (v0.2.0)](docs/plugin-bar.png)
 ![Current standalone plugin graph (v0.2.0)](docs/plugin-graph.svg.png)
 ![Step inspector: click or keyboard-select a node](docs/plugin-step-inspector.png)
+![Dark diagram matching the native palette, with the inspector open](docs/plugin-graph-dark.png)
 
 ### How the iframe gets its data (the part people get wrong)
 
