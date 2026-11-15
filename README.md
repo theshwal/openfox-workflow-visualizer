@@ -85,7 +85,7 @@ Real-environment verification (isolated OpenFox instance, mock LLM, in-memory DB
 | Graph appears once the run is known | The cache lives in the plugin process; after a host restart the bar and graph repopulate on the next `workflow.execution.changed`. No public "read current execution" API exists for plugins. |
 | Asset paths are plugin-root relative | `registerAsset('src/graph.html')` — the route joins the path with the plugin root, so a bare `graph.html` 404s. |
 | `reinstall` does not reload changed source | Use **uninstall → install** to pick up code changes. |
-| No click-through to step details | Nodes are focusable/inspectable (`aria-label`, `data-step-id`) but do not open anything yet. |
+| Step details intentionally limited | Clicking a graph node shows its type, observed runs, active state and incoming/outgoing transitions; agent prompts and outputs are intentionally not exposed. |
 
 ## Privacy & security
 
@@ -105,7 +105,8 @@ src/graph.html  iframe panel: RPC + definition fetch, SVG rendering
 
 ## Roadmap
 
-- [ ] Click a node to inspect the step (type, agent, last output).
+- [x] Click or keyboard-select a node to inspect safe step metadata and transitions.
+- [ ] Optional agent/output inspector with explicit host permissions and redaction.
 - [ ] Restore state after a host reload once a read API exists.
 - [ ] Publish in the Community Hub "Related OpenFox plugins" section (docs PR opened).
 - [ ] Optional completion notification.
