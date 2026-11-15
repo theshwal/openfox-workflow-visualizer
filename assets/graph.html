@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Workflow graph</title>
+    <style>
+      /* Only page chrome. The diagram itself is the workflow manager's own
+         component, rendered with its native inline SVG styling. */
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        padding: 12px;
+        background: #0d1117;
+        color: #e6edf3;
+        font: 13px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      .status { color: #8b949e; margin: 0 0 10px; font-size: 12px; }
+      .status.error { color: #f87171; white-space: pre-wrap; }
+      #root { overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <p class="status" id="status">Loading…</p>
+    <div id="root"></div>
+    <script src="./graph.js"></script>
+  </body>
+</html>

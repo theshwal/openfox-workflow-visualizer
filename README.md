@@ -2,11 +2,10 @@
 
 An **in-chat workflow visualizer for OpenFox**, shipped as a real `openfox/plugin` **API v2** package.
 
-When a workflow runs it shows, **above the chat composer**, the workflow name, the current step and the engine's exact iteration counters — and a **"Graph" button that opens a real workflow diagram** (steps, transitions, current-step highlight, per-step run counts) rendered as SVG inside a plugin iframe panel. No React patching, no DOM hacking, no monkey patching.
+The diagram you see is **the workflow manager's own component** — `FlowDiagram.tsx` + `layout.ts` vendored verbatim from OpenFox and pinned to an upstream SHA (see `src/vendor/PROVENANCE.md`). The plugin does not re-implement any drawing: it renders that React component inside a plugin panel iframe and feeds it the live runtime facts.
 
-![Current standalone plugin graph panel (v0.2.0, not the target design)](docs/plugin-graph-panel.png)
+![The workflow manager diagram, rendered by the plugin](docs/plugin-graph-manager.png)
 
-> Status: **v0.2.0 — standalone plugin implementation.** The target user experience is the integrated, hover-accessible workflow graph demonstrated in the [reference screenshot](https://github.com/theshwal/openfox/blob/feat/workflow-visualizer-native/docs/images/workflow-visualizer.png). That image depicts a native prototype, **not** the current plugin UI. The plugin must reach this design through supported extension APIs, not an upstream core change.
 ---
 
 ## What it does
@@ -22,6 +21,15 @@ Data comes exclusively from the **`workflow.execution.changed`** hook (engine tr
 ![Current standalone plugin graph (v0.2.0)](docs/plugin-graph.svg.png)
 ![Step inspector: click or keyboard-select a node](docs/plugin-step-inspector.png)
 ![Dark diagram matching the native palette, with the inspector open](docs/plugin-graph-dark.png)
+
+### Reuse, not imitation (v0.3.0)
+
+| Concern | How |
+| --- | --- |
+| Diagram geometry, edges, colours, labels | **Vendored** `layout.ts` + `FlowDiagram.tsx` from the workflow manager (pinned SHA, MIT, provenance file). No home-made SVG engine. |
+| Live active step | `runtime={{ currentStepId, stepIterationCounts }}` — the same prop the settings modal uses. |
+| Data | RPC `getGraph` (engine state, per session) + `GET /api/workflows/:id` (definition) + `GET /api/agents`. |
+| Build | `npm run build` → esbuild bundles React + the vendored component into `assets/graph.js` (committed). |
 
 ### How the iframe gets its data (the part people get wrong)
 

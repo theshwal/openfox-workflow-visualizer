@@ -62,8 +62,8 @@ describe('plugin registration', () => {
     register(registry)
 
     const graph = registry.panels.find((panel) => panel.id === GRAPH_PANEL_ID)
-    expect(graph).toMatchObject({ kind: 'iframe', url: 'src/graph.html', size: 'xl' })
-    expect(registry.assets).toEqual(expect.arrayContaining(['src/graph.html', 'src/graph.js']))
+    expect(graph).toMatchObject({ kind: 'iframe', url: 'assets/graph.html', size: 'xl' })
+    expect(registry.assets).toEqual(expect.arrayContaining(['assets/graph.html', 'assets/graph.js']))
   })
 
   it('keeps a declarative text panel as the fallback', () => {
