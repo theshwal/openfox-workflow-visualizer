@@ -168,6 +168,8 @@ export function buildComposerNode(execution) {
       direction: 'row',
       gap: 'sm',
       align: 'center',
+      // Never let the zone's other contributions squeeze the entry point away.
+      className: 'shrink-0',
       children: [
         {
           type: 'button',
@@ -205,7 +207,7 @@ export function buildComposerNode(execution) {
     variant: 'ghost',
     action: { kind: 'openPanel', panelId: GRAPH_PANEL_ID },
   })
-  return { type: 'stack', direction: 'row', gap: 'sm', align: 'center', children }
+  return { type: 'stack', direction: 'row', gap: 'sm', align: 'center', className: 'shrink-0', children }
 }
 
 /**
