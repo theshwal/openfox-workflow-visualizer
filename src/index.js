@@ -81,6 +81,14 @@ export function register(registry) {
     return { execution: execution ? { ...execution } : null }
   })
 
+  // Documented contract (docs/PLUGINS.md): the host calls `initPanel` when a
+  // panel opens, with { panelId, tabId } plus the zone context. Without it the
+  // host gets a 400 for every panel opening.
+  registry.registerRpc('initPanel', (params, context) => {
+    const sessionId = sessionIdOf(params, context)
+    return { content: buildPanelNodes(store.read(sessionId)) }
+  })
+
   registry.registerAsset(GRAPH_HTML)
   registry.registerAsset(GRAPH_JS)
 

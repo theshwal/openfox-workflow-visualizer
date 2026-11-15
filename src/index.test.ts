@@ -49,12 +49,20 @@ describe('plugin registration', () => {
     })
   })
 
+  it('registers initPanel so the host does not get a 400 when a panel opens', async () => {
+    const registry = makeRegistry()
+    register(registry)
+    expect([...registry.rpcs.keys()]).toContain('initPanel')
+    const body = await registry.rpcs.get('initPanel')({ panelId: PANEL_ID }, { sessionId: 's1' })
+    expect(Array.isArray(body.content)).toBe(true)
+  })
+
   it('registers the workflow.execution.changed hook and both RPCs', () => {
     const registry = makeRegistry()
     register(registry)
 
     expect([...registry.hooks.keys()]).toEqual(['workflow.execution.changed'])
-    expect([...registry.rpcs.keys()].sort()).toEqual([RPC_GET_GRAPH, RPC_GRAPH, RPC_STATE].sort())
+    expect([...registry.rpcs.keys()].sort()).toEqual([RPC_GET_GRAPH, RPC_GRAPH, RPC_STATE, 'initPanel'].sort())
   })
 
   it('declares an iframe graph panel backed by a registered asset', () => {

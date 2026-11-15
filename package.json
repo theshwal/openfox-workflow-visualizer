@@ -1,6 +1,6 @@
 {
   "name": "openfox-workflow-visualizer",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "In-chat OpenFox workflow visualizer: live step, iteration counters and an interactive workflow graph (iframe panel) contributed through the openfox/plugin v2 composer.top zone.",
   "type": "module",
   "main": "./lib/index.js",
