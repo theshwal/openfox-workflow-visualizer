@@ -248,3 +248,19 @@ function layout(steps, edges, entryStep, byId) {
 }
 
 export const GEOMETRY = { NODE_W, NODE_H, COL_GAP, ROW_GAP, PAD }
+
+/** Return only display-safe facts about a selected graph step. */
+export function inspectGraphStep(model, stepId) {
+  if (!model || typeof stepId !== 'string') return null
+  const step = model.steps.find((entry) => entry.id === stepId)
+  if (!step) return null
+  return {
+    id: step.id,
+    name: step.name,
+    type: step.type,
+    current: step.current === true,
+    visits: step.visits,
+    incoming: model.edges.filter((edge) => edge.to === step.id).map((edge) => ({ from: edge.from, label: edge.label })),
+    outgoing: model.edges.filter((edge) => edge.from === step.id).map((edge) => ({ to: edge.to, label: edge.label })),
+  }
+}
